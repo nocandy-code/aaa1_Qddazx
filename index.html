@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Курс криптовалюты — исправлено</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat+Alternates:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --accent: #2563eb;
+      --bg: #f7f8fb;
+      --card: #fff;
+      --text: #111;
+      --muted: #6b7280;
+      --border: #e6e8eb;
+    }
+
+    *{ box-sizing: border-box; }
+    body {
+      font-family: 'Montserrat Alternates', sans-serif;
+      background: var(--bg);
+      margin:0;
+      padding:20px;
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    h1 { font-size:20px; margin:0 0 16px; font-weight:600; }
+
+    .card {
+      background:var(--card);
+      border-radius:12px;
+      padding:16px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.06);
+      position:relative;
+      max-width:760px;
+    }
+
+    .label { color:var(--muted); margin-bottom:8px; font-weight:500; font-size:14px; }
+
+    .input-wrapper { position:relative; margin-bottom:8px; }
+    input[type="text"], input[type="number"], select {
+      -webkit-appearance:none;
+      appearance:none;
+      padding:10px 12px;
+      width:100%;
+      border-radius:10px;
+      border:1px solid var(--border);
+      font-size:14px;
+      background:var(--card);
+      color:var(--text);
+      line-height:1.2;
+      transition: box-shadow .18s, border-color .18s;
+    }
+    input[type="text"]::placeholder,
+    input[type="number"]::placeholder { color:#9aa0a6; }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.07);
+    }
+
+    .buttons { display:flex; gap:10px; margin-top:8px; }
+    button {
+      padding:9px 14px;
+      border:none;
+      border-radius:10px;
+      background:var(--accent);
+      color:#fff;
+      font-weight:600;
+      cursor:pointer;
+    }
+    button.secondary {
+      background:transparent;
+      color:var(--accent);
+      border:1px solid var(--accent);
+    }
+    .price { margin-top:16px; font-size:16px; font-weight:600; color:var(--text); }
+
+    /* подсказки (общие) */
+    .suggestions-box {
+      list-style:none;
+      margin:0;
+      padding:6px;
+      position:absolute;
+      left:0;
+      right:0;
+      top:calc(100% + 8px);
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:10px;
+      box-shadow:0 8px 30px rgba(15,20,25,0.08);
+      z-index:40;
+      max-height:220px;
+      overflow:auto;
+      display:none;
+    }
+    .suggestions-box li {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:8px 10px;
+      font-size:14px;
+      color:var(--text);
+      cursor:pointer;
+      border-radius:8px;
+    }
+    .suggestions-box li + li { margin-top:6px; }
+    .suggestions-box li:hover { background:#f2f6ff; }
+
+    .sugg-main { display:flex; gap:8px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sugg-main strong { font-weight:600; font-size:14px; }
+    .sugg-symbol { color:#888; font-size:12px; }
+    .sugg-score { color:var(--muted); font-size:12px; min-width:42px; text-align:right; }
+
+    /* модалка */
+    .modal-overlay {
+      position:fixed; inset:0; display:none;
+      background:rgba(0,0,0,0.45);
+      justify-content:center; align-items:center; z-index:100;
+      padding:20px;
+    }
+    .modal {
+      width:100%; max-width:420px;
+      background:var(--card);
+      border-radius:12px; padding:18px;
+      box-shadow:0 10px 40px rgba(0,0,0,0.3);
+      transform:translateY(-12px) scale(.98);
+      opacity:0; transition:all .22s ease;
+      position:relative;
+    }
+    .modal.active { transform:translateY(0) scale(1); opacity:1; }
+    .close-btn {
+      position:absolute; right:12px; top:10px; border:0; background:transparent; font-size:20px; cursor:pointer; color:#666;
+    }
+    .modal .label { margin-bottom:10px; }
+
+    #convertResult { margin-top:12px; font-weight:700; color:var(--accent); }
+
+    /* настройки */
+    .settings-btn {
+      position:fixed; right:18px; top:18px; z-index:120;
+      background:var(--accent); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer;
+    }
+    .settings-menu {
+      position:fixed; right:18px; top:58px; width:220px; z-index:120;
+      background:var(--card); border-radius:10px; padding:12px; border:1px solid var(--border);
+      box-shadow:0 8px 30px rgba(0,0,0,0.12); display:none;
+    }
+    .settings-menu.active { display:block; }
+    .settings-item { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+
+    /* переключатель (ползунок) */
+    .switch { position:relative; width:46px; height:26px; display:inline-block; }
+    .switch input { display:none; }
+    .slider {
+      position:absolute; inset:0; border-radius:26px; background:#d1d5db; transition:background .18s;
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,0.06);
+    }
+    .slider:before {
+      content:""; position:absolute; left:4px; top:4px; width:18px; height:18px; border-radius:50%;
+      background:#fff; transition: transform .18s cubic-bezier(.2,.9,.3,1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    .switch input:checked + .slider { background: var(--accent); }
+    .switch input:checked + .slider:before { transform: translateX(20px); }
+
+    /* темная тема */
+    body.dark {
+      --bg:#0b0b0c; --card:#121212; --text:#e6e9eb; --muted:#9aa0a6; --border:#222428;
+      --accent:#2b7bf3;
+    }
+    body.dark .suggestions-box li:hover { background: rgba(255,255,255,0.03); }
+    body.dark .suggestions-box { background:var(--card); border-color:var(--border); }
+    body.dark .slider { background:#333; }
+    body.dark .slider:before { background:#f3f4f6; }
+
+    @media (min-width:720px){ .card { margin: 0 auto; } }
+  </style>
+</head>
+<body>
+  <button class="settings-btn" id="settingsBtn">⚙️ Настройки</button>
+
+  <div class="settings-menu" id="settingsMenu">
+    <div class="settings-item">
+      <div style="font-weight:600">Тёмная тема</div>
+      <label class="switch" title="Тёмная тема">
+        <input type="checkbox" id="themeToggle" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <h1>Курс криптовалюты</h1>
+
+  <div class="card">
+    <div class="label">Введите название или символ монеты:</div>
+
+    <div class="input-wrapper" id="mainInputWrapper">
+      <input id="coinInput" type="text" placeholder="Например: btc, bitcoin, solana" autocomplete="off" />
+      <ul id="suggestions" class="suggestions-box" role="listbox" aria-label="Подсказки монет"></ul>
+    </div>
+
+    <div class="buttons">
+      <button id="checkBtn">Показать курс</button>
+      <button id="calculatorBtn" class="secondary">Калькулятор</button>
+    </div>
+
+    <div id="prices" class="price" style="display:none;">
+      <div><b>Монета:</b> <span id="coinName">—</span></div>
+      <div><b>USD:</b> <span id="usd">—</span></div>
+      <div><b>RUB:</b> <span id="rub">—</span></div>
+    </div>
+  </div>
+
+  <!-- Модалка калькулятора -->
+  <div class="modal-overlay" id="modalOverlay" aria-hidden="true">
+    <div class="modal" id="calculatorModal" role="dialog" aria-modal="true" aria-labelledby="calcTitle">
+      <button class="close-btn" id="closeModal" aria-label="Закрыть">&times;</button>
+      <h2 id="calcTitle">Калькулятор</h2>
+
+      <div class="label">Криптовалюта</div>
+      <div class="input-wrapper" style="margin-bottom:10px">
+        <input id="cryptoInput" type="text" placeholder="Введите название или символ монеты" autocomplete="off" />
+        <ul id="cryptoSuggestions" class="suggestions-box" role="listbox" aria-label="Подсказки монет в калькуляторе"></ul>
+      </div>
+
+      <div class="label">Сумма</div>
+      <input type="number" id="amountInput" placeholder="Введите сумму" min="0" step="any" />
+
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <select id="currencySelect">
+          <option value="crypto-to-fiat">Криптовалюта - RUB/USD</option>
+          <option value="fiat-to-crypto">RUB/USD - Криптовалюта</option>
+        </select>
+        <select id="fiatSelect">
+          <option value="usd">USD</option>
+          <option value="rub">RUB</option>
+        </select>
+      </div>
+
+      <div style="margin-top:12px;">
+        <button id="convertBtn">Рассчитать</button>
+        <div id="convertResult"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const API_URL = "https://api.coingecko.com/api/v3";
+  let coinList = [];
+  let selectedCoinId = null;
+  let selectedCoinSymbol = null;
+  let calculatorCoinId = null;
+  let calculatorCoinSymbol = null;
+
+  // вспомогательная функция fetch с retry и удобными ошибками
+  async function fetchWithRetry(url, opts = {}, retries = 2, backoff = 300) {
+    // предупреждение если открыт через file:// — часто приводит к Failed to fetch
+    if (location.protocol === 'file:') {
+      throw new Error('Страница открыта по file:// — браузер может блокировать сетевые запросы. Запустите локальный сервер (например: `python -m http.server` или `npx serve`) и откройте http://localhost.');
+    }
+
+    try {
+      const res = await fetch(url, { ...opts, cache: 'no-cache', mode: 'cors' });
+      if (!res.ok) {
+        // попытаться прочитать тело ошибки, если есть
+        let body = '';
+        try { body = await res.text(); } catch(_) {}
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${body ? '- ' + body : ''}`);
+      }
+      return await res.json();
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, backoff));
+        return fetchWithRetry(url, opts, retries - 1, Math.round(backoff * 1.6));
+      }
+      // прокидуем понятную ошибку дальше
+      throw err;
+    }
+  }
+
+  async function loadCoinList(){
+    try{
+      const data = await fetchWithRetry(`${API_URL}/coins/list`);
+      coinList = data;
+      console.log('Loaded coin list, count =', coinList.length);
+    }catch(e){
+      console.error('loadCoinList error:', e);
+      alert('Не удалось загрузить список монет. ' + e.message);
+      coinList = [];
+    }
+  }
+
+  // Левенштейн + процент схожести (как раньше)
+  function levenshtein(a,b){
+    if(!a) return b?b.length:0;
+    if(!b) return a.length;
+    a = a.toLowerCase(); b = b.toLowerCase();
+    const al=a.length, bl=b.length;
+    const dp=Array(al+1).fill(0).map(()=>Array(bl+1).fill(0));
+    for(let i=0;i<=al;i++) dp[i][0]=i;
+    for(let j=0;j<=bl;j++) dp[0][j]=j;
+    for(let i=1;i<=al;i++){
+      for(let j=1;j<=bl;j++){
+        const cost = a[i-1]===b[j-1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+      }
+    }
+    return dp[al][bl];
+  }
+  function similarityPercent(q, text){
+    if(!q) return 0;
+    q=q.toLowerCase(); text=(text||'').toLowerCase();
+    const dist = levenshtein(q,text);
+    const maxLen = Math.max(q.length, text.length) || 1;
+    return Math.max(0, Math.round((1 - dist/maxLen) * 100));
+  }
+  function findCoin(query, limit = 7){
+    if(!query) return [];
+    const q = query.trim().toLowerCase();
+    if(!coinList || coinList.length===0) return [];
+    return coinList.map(c=>{
+      const sName = similarityPercent(q, c.name || "");
+      const sSym  = similarityPercent(q, c.symbol || "");
+      const sId   = similarityPercent(q, c.id || "");
+      return {...c, score: Math.max(sName, sSym, sId)};
+    }).filter(x=>x.score>8).sort((a,b)=>b.score-a.score).slice(0, limit);
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]); }
+
+  function renderSuggestions(listEl, matches, onSelect){
+    listEl.innerHTML = '';
+    if(!matches || matches.length===0){ listEl.style.display = 'none'; return; }
+    matches.forEach(m=>{
+      const li = document.createElement('li');
+      li.innerHTML = `<div class="sugg-main"><strong>${escapeHtml(m.name)}</strong> <div class="sugg-symbol">(${escapeHtml((m.symbol||'').toUpperCase())})</div></div><div class="sugg-score">${m.score}%</div>`;
+      li.addEventListener('click', ()=> onSelect(m));
+      listEl.appendChild(li);
+    });
+    listEl.style.display = 'block';
+  }
+
+  async function fetchPriceAndShow(coinId, displayName){
+    try{
+      const url = `${API_URL}/simple/price?ids=${encodeURIComponent(coinId)}&vs_currencies=usd,rub`;
+      const data = await fetchWithRetry(url);
+      if(!data || !data[coinId]) throw new Error('Пустой ответ от API');
+      const price = data[coinId];
+      document.getElementById("coinName").textContent = displayName || coinId;
+      document.getElementById("usd").textContent = price.usd;
+      document.getElementById("rub").textContent = price.rub;
+      document.getElementById("prices").style.display = "block";
+      selectedCoinId = coinId;
+    }catch(e){
+      console.error('fetchPriceAndShow error:', e);
+      alert('Ошибка при получении курса: ' + e.message + '\n\nВозможные причины:\n• Вы открыли файл напрямую (file://) — откройте через локальный сервер\n• CoinGecko временно недоступен или блокирует запросы\n\nЕсли вы запускаете локально: откройте терминал в папке с файлом и выполните `python -m http.server` (или `npx serve .`), затем откройте http://localhost:8000');
+    }
+  }
+
+  // элементы
+  const coinInput = document.getElementById("coinInput");
+  const suggestions = document.getElementById("suggestions");
+  const cryptoInput = document.getElementById("cryptoInput");
+  const cryptoSuggestions = document.getElementById("cryptoSuggestions");
+
+  coinInput.addEventListener("input", (e)=>{
+    const q = e.target.value;
+    if(!q){ suggestions.style.display = 'none'; return; }
+    const matches = findCoin(q, 8);
+    renderSuggestions(suggestions, matches, (m)=>{
+      coinInput.value = `${m.name} (${(m.symbol||'').toUpperCase()})`;
+      selectedCoinId = m.id;
+      selectedCoinSymbol = (m.symbol||'').toUpperCase();
+      suggestions.style.display = 'none';
+    });
+  });
+
+  cryptoInput.addEventListener("input", (e)=>{
+    const q = e.target.value;
+    if(!q){ cryptoSuggestions.style.display = 'none'; return; }
+    const matches = findCoin(q, 8);
+    renderSuggestions(cryptoSuggestions, matches, (m)=>{
+      cryptoInput.value = `${m.name} (${(m.symbol||'').toUpperCase()})`;
+      cryptoSuggestions.style.display = 'none';
+      calculatorCoinId = m.id;
+      calculatorCoinSymbol = (m.symbol||'').toUpperCase();
+    });
+  });
+
+  document.addEventListener("click", (ev)=>{
+    const el = ev.target;
+    if(!el.closest('.input-wrapper')) {
+      suggestions.style.display = 'none';
+      cryptoSuggestions.style.display = 'none';
+    }
+  });
+
+  document.getElementById("checkBtn").addEventListener("click", ()=>{
+  const q = coinInput.value.trim();
+  if(!q) return alert("Введите название монеты");
+
+  // 1. если выбрана из подсказки
+  if(selectedCoinId) {
+    fetchPriceAndShow(selectedCoinId, coinInput.value);
+    return;
+  }
+
+  // 2. точное совпадение по имени или символу
+  const exact = coinList.find(c =>
+    c.symbol.toLowerCase() === q.toLowerCase() ||
+    c.name.toLowerCase() === q.toLowerCase()
+  );
+  if(exact) {
+    fetchPriceAndShow(exact.id, exact.name);
+    return;
+  }
+
+  // 3. fallback: ближайшее совпадение (как раньше)
+  const matches = findCoin(q, 6);
+  if(matches.length === 0) return alert("Монета не найдена");
+  fetchPriceAndShow(matches[0].id, matches[0].name);
+});
+
+
+  // модалка
+  const modalOverlay = document.getElementById("modalOverlay");
+  const calculatorModal = document.getElementById("calculatorModal");
+  const calculatorBtn = document.getElementById("calculatorBtn");
+  const closeModal = document.getElementById("closeModal");
+
+  calculatorBtn.addEventListener("click", ()=>{
+    if(selectedCoinId && !cryptoInput.value){
+      cryptoInput.value = document.getElementById("coinName").textContent + (selectedCoinSymbol ? ` (${selectedCoinSymbol})` : '');
+      calculatorCoinId = selectedCoinId;
+      calculatorCoinSymbol = selectedCoinSymbol || null;
+    }
+    modalOverlay.style.display = 'flex';
+    setTimeout(()=> calculatorModal.classList.add('active'), 10);
+    modalOverlay.setAttribute('aria-hidden','false');
+  });
+  function hideModal(){ calculatorModal.classList.remove('active'); setTimeout(()=>{ modalOverlay.style.display='none'; modalOverlay.setAttribute('aria-hidden','true'); }, 220); }
+  closeModal.addEventListener('click', hideModal);
+  modalOverlay.addEventListener('click', (e)=> { if(e.target === modalOverlay) hideModal(); });
+
+  document.getElementById("convertBtn").addEventListener("click", async ()=>{
+    const amount = parseFloat(document.getElementById("amountInput").value);
+    const currencyType = document.getElementById("currencySelect").value;
+    const fiat = document.getElementById("fiatSelect").value;
+
+    if(!amount || amount <= 0) return alert("Введите корректную сумму");
+
+    if(!calculatorCoinId){
+      const q = cryptoInput.value.trim();
+      if(!q) return alert("Выберите криптовалюту");
+      const matches = findCoin(q, 6);
+      if(matches.length === 0) return alert("Монета не найдена в подсказках");
+      calculatorCoinId = matches[0].id;
+      calculatorCoinSymbol = (matches[0].symbol||'').toUpperCase();
+    }
+
+    try{
+      const url = `${API_URL}/simple/price?ids=${encodeURIComponent(calculatorCoinId)}&vs_currencies=usd,rub`;
+      const data = await fetchWithRetry(url);
+      if(!data || !data[calculatorCoinId]) throw new Error('Пустой ответ от API');
+      const p = data[calculatorCoinId];
+      let result = 0;
+      if(currencyType === "crypto-to-fiat"){
+        result = fiat === "usd" ? amount * p.usd : amount * p.rub;
+        document.getElementById("convertResult").textContent =
+          `${amount} ${calculatorCoinSymbol || calculatorCoinId.toUpperCase()} = ${result.toFixed(2)} ${fiat.toUpperCase()}`;
+      } else {
+        result = fiat === "usd" ? amount / p.usd : amount / p.rub;
+        document.getElementById("convertResult").textContent =
+          `${amount} ${fiat.toUpperCase()} = ${result.toFixed(6)} ${calculatorCoinSymbol || calculatorCoinId.toUpperCase()}`;
+      }
+    }catch(e){
+      console.error('convert error:', e);
+      alert('Ошибка при получении курса: ' + e.message + '\n\nЕсли ошибка "Failed to fetch" — попробуйте открыть страницу через локальный сервер (не по file://).');
+    }
+  });
+
+  // настройки
+  const settingsBtn = document.getElementById("settingsBtn");
+  const settingsMenu = document.getElementById("settingsMenu");
+  const themeToggle = document.getElementById("themeToggle");
+  settingsBtn.addEventListener("click", ()=> settingsMenu.classList.toggle("active"));
+  if(localStorage.getItem("theme") === "dark"){ document.body.classList.add("dark"); themeToggle.checked = true; }
+  themeToggle.addEventListener("change", ()=>{
+    if(themeToggle.checked){ document.body.classList.add("dark"); localStorage.setItem("theme","dark"); }
+    else { document.body.classList.remove("dark"); localStorage.setItem("theme","light"); }
+  });
+
+  // старт: загрузим список монет
+  loadCoinList();
+</script>
+</body>
+</html>
